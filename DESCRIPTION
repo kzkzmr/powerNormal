@@ -1,0 +1,24 @@
+Package: powerNormal
+Type: Package
+Title: The power normal distribution with or without reparametrization
+Version: 0.1.0
+Authors@R: c(
+    person(
+      "Kazushi", "Maruo",
+      email = "kazushi.maruo@gmail.com",
+      role = c("aut", "cre")
+    )
+  )
+Description: 
+  Provides functions for the power normal distribution (PND) and its 
+  multivariate extension (MVPND), including density, distribution 
+  function, quantile function, and random generation. Reparametrized 
+  versions are also implemented using interpretable scale and location 
+  parameters based on the median and interquantile range, as proposed 
+  by Maruo et al. (2017). Useful for statistical modeling and simulation 
+  involving right-skewed continuous variables.
+License: GPL-2 | GPL-3
+Imports: bcmixed, mvtnorm
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.2
