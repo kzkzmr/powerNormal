@@ -73,34 +73,61 @@ pnd_reparm <- function(lambda, xi, tau){
     sigma <- (1 + lambda * mu) / (lambda * K)
     return(list(mu, sigma))
   }
-
+  all_same_sign <- function(x) {
+    x_clean <- x[!is.na(x) & !is.nan(x)]
+    if (length(x_clean) == 0) {
+      res <- TRUE
+    } else {
+      signs <- sign(x_clean)
+      res <- all(signs == signs[1])
+    }
+    return(res)
+  }
   if (abs(lambda) > 0.01){
-    K1 <- sign(lambda) * seq(0.1, 100, 0.1)
+    K1 <- sign(lambda) * seq(-100, 100, 0.1) + 1e-10
     kp <- length(K1)
     ms1 <- xik_ms(lambda, xi, K1)
     mu1 <- ms1[[1]]
     sigma1 <- ms1[[2]]
     d1 <- qpnd(0.75, lambda, mu1, sigma1) -
       qpnd(0.25, lambda , mu1, sigma1) - xi * tau
-    ld1 <- which.min(abs(d1))
-    if (sign(d1[ld1 - 1]) == sign(d1[ld1])) {
-      K2 <- seq(K1[ld1], K1[ld1 + 1], sign(lambda) * 1e-4)
+    if (all_same_sign(d1)) {
+      warning("Truncation proportion (1-A(K)) is too small to calculate parameters precisely. It is recommended to set a smaller value for tau.")
+      mu <- NA
+      sigma <- NA
     } else {
-      K2 <- seq(K1[ld1 - 1], K1[ld1], sign(lambda) * 1e-4)
+      ld1 <- which.min(abs(d1))
+      if (sign(d1[ld1 - 1]) == sign(d1[ld1])) {
+        K2 <- seq(K1[ld1], K1[ld1 + 1], sign(lambda) * 1e-4)
+      } else {
+        K2 <- seq(K1[ld1 - 1], K1[ld1], sign(lambda) * 1e-4)
+      }
+      kp <- length(K2)
+      ms2 <- xik_ms(lambda, xi, K2)
+      mu2 <- ms2[[1]]
+      sigma2 <- ms2[[2]]
+      d2 <- qpnd(0.75, lambda, mu2, sigma2)-
+        qpnd(0.25, lambda, mu2, sigma2) - xi * tau
+      ld2 <- which.min(abs(d2))
+      if (abs(d2[ld2]) > xi / 100 |
+          abs((qpnd(0.5, lambda, mu2[ld2], sigma2[ld2]) - xi) / xi) > 0.01) {
+        warning("Truncation proportion (1-A(K)) is too small to calculate parameters precisely. It is recommended to set a smaller value for tau.")
+        mu <- NA
+        sigma <- NA
+      } else {
+        mu <- mu2[ld2]
+        sigma <- sigma2[ld2]
+
+      }
     }
-    kp <- length(K2)
-    ms2 <- xik_ms(lambda, xi, K2)
-    mu2 <- ms2[[1]]
-    sigma2 <- ms2[[2]]
-    d2 <- qpnd(0.75, lambda, mu2, sigma2)-
-      qpnd(0.25, lambda, mu2, sigma2) - xi * tau
-    ld2 <- which.min(abs(d2))
-    mu <- mu2[ld2]
-    sigma <- sigma2[ld2]
   }
   else{
+    if (abs(lambda) < 0.01 & lambda != 0){
+      message("K might become huge when abs(lambda) < 0.01, so lambda was set as 0")
+    }
     mu <- log(xi)
     sigma <- log((tau + sqrt(tau ^ 2 + 4)) / 2) / qnorm(0.75)
   }
   return(data.frame(mu = mu, sigma = sigma))
 }
+

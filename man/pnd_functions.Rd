@@ -108,8 +108,6 @@ A(K)p, & \lambda < 0.
 In practice, parameters are often estimated assuming \eqn{A(K) = 1}
 (i.e., the truncation is negligible). This simplification is generally
 acceptable unless extreme quantiles (e.g., 97.5%) are of interest.
-Estimation under this assumption can be performed using \code{bct.v()}
-from the \pkg{bcmixed} package.
 }
 \examples{
 dpnd(x = 5, lambda = 0.5, mu = 10, sigma = 2)
@@ -130,16 +128,7 @@ distribution. \emph{Japanese Journal of Biometrics}, 1, 28–54.
 Maruo, K., Shirahata, S., & Goto, M. (2011). Underlying assumptions of the
 power-normal distribution. \emph{Behaviormetrika}, 38(1), 85–95.
 \url{https://doi.org/10.2333/bhmk.38.85}
-
-Maruo, K., Ishii, R., Yamaguchi, Y., & Gosho, M. (2021). bcmixed: A package
-for median inference on longitudinal data with the Box–Cox transformation.
-\emph{The R Journal}, 13(2), 253–265.
-\url{https://doi.org/10.32614/RJ-2021-083}
 }
 \seealso{
-\code{\link[powerNormal]{dpnd}},
-\code{\link[powerNormal]{ppnd}},
-\code{\link[powerNormal]{qpnd}},
-\code{\link[powerNormal]{rpnd}},
-\code{\link[bcmixed]{bct.v}}
+\code{\link[powerNormal]{pnd_est}}
 }
