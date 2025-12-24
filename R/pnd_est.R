@@ -62,6 +62,7 @@
 #'
 #' @examples
 #' # A(K)=0.826: case where truncation might not be negligible
+#' set.seed(12345)
 #' x <- rpnd_rp(100, lambda = 0.4, xi = 100, tau = 2)
 #' pnd_est(x)
 #' pnd_est(x, tn = TRUE)
@@ -71,7 +72,14 @@
 #' @importFrom MASS ginv
 #'
 #' @export
-pnd_est <- function(x, tn = FALSE, lmdint = c(-3, 3)) {
+pnd_est <- function(x, tn = FALSE, lmdint = c(-5, 5)) {
+  x0 <- x
+  nv <- !is.infinite(x) & !is.na(x) & !is.nan(x)
+  if (sum(nv) < length(x)) {
+    warning("The data contains at least one of NA, Inf, and/or NaN.
+            These values have been removed.")
+  }
+  x <- x[nv]
   pnd_est_tn <- function(x, lmdint){
     if (sum(x <= 0) > 0) {
       stop("all elements of x must be positive.")
