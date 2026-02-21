@@ -4,7 +4,7 @@
 \alias{pnd_est}
 \title{Parameter Estimation for the Power Normal Distribution}
 \usage{
-pnd_est(x, tn = FALSE, lmdint = c(-3, 3))
+pnd_est(x, tn = FALSE, lmdint = c(-5, 5))
 }
 \arguments{
 \item{x}{A positive numeric vector of observed values.}
@@ -54,6 +54,7 @@ on the median, makes inferences based on the assumption that \eqn{A(K) = 1}.
 }
 \examples{
 # A(K)=0.826: case where truncation might not be negligible
+set.seed(12345)
 x <- rpnd_rp(100, lambda = 0.4, xi = 100, tau = 2)
 pnd_est(x)
 pnd_est(x, tn = TRUE)

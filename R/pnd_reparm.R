@@ -55,79 +55,193 @@
 #' @name pnd_reparm
 #' @rdname pnd_reparm
 #' @export
-pnd_reparm <- function(lambda, xi, tau){
-  if (!is.numeric(lambda) | length(lambda) != 1 | !is.numeric(xi) |
-      length(xi) != 1 | !is.numeric(tau) | length(tau) != 1){
-    stop("Arguments 'lambda', 'xi', and 'tau' must be scalar numeric values.")
+pnd_reparm <- function(lambda, xi, tau) {
+
+  ## ---- developer debug flag ----
+  .debug_on <- isTRUE(getOption("powerNormal.debug"))
+
+  .dbg <- function(...) {
+    if (.debug_on) {
+      paste0(" [debug: ", paste0(..., collapse = ", "), "]")
+      } else {
+        ""
+      }
   }
-  zps <- function(lambda, K, p){
+
+  .warn <- function(..., dbg = NULL) {
+    msg <- paste0(...)
+    if (.debug_on && !is.null(dbg)) msg <- paste0(msg, " [debug: ", dbg, "]")
+    warning(msg, call. = FALSE)
+  }
+
+  .stop <- function(..., dbg = NULL) {
+    msg <- paste0(...)
+    if (.debug_on && !is.null(dbg)) msg <- paste0(msg, " [debug: ", dbg, "]")
+    stop(msg, call. = FALSE)
+  }
+
+  ## ---- input validation ----
+  if (!is.numeric(lambda) || length(lambda) != 1 ||
+      !is.numeric(xi)     || length(xi) != 1 ||
+      !is.numeric(tau)    || length(tau) != 1) {
+    stop(
+      "Arguments 'lambda', 'xi', and 'tau' must be scalar numeric values.",
+      call. = FALSE
+    )
+  }
+
+  ## ---- helper: transformed probability ----
+  zps <- function(lambda, K, p) {
     AK <- pnorm(sign(lambda) * K)
     if (lambda < 0) ps <- AK * p
     if (lambda > 0) ps <- 1 - AK * (1 - p)
-    zps <- qnorm(ps)
-    return(zps)
+    qnorm(ps)
   }
-  xik_ms <- function(lambda, xi, K){
+
+  ## ---- helper: compute (mu, sigma) given K ----
+  xik_ms <- function(lambda, xi, K) {
     z5 <- zps(lambda, K, 0.5)
-    mu <- (K * (xi ^ lambda - 1) - z5)/(lambda * (K + z5))
+    mu <- (K * (xi^lambda - 1) - z5) / (lambda * (K + z5))
     sigma <- (1 + lambda * mu) / (lambda * K)
-    return(list(mu, sigma))
+    list(mu, sigma)
   }
+
+  ## ---- check if all finite values have the same sign ----
   all_same_sign <- function(x) {
-    x_clean <- x[!is.na(x) & !is.nan(x)]
-    if (length(x_clean) == 0) {
-      res <- TRUE
-    } else {
-      signs <- sign(x_clean)
-      res <- all(signs == signs[1])
-    }
-    return(res)
+    x_clean <- x[is.finite(x)]
+    if (length(x_clean) == 0) return(TRUE)
+    all(x_clean >= 0) || all(x_clean <= 0)
   }
-  if (abs(lambda) > 0.01){
+
+  ## ============================================================
+  ## Main branch: |lambda| > 0.01
+  ## ============================================================
+  if (abs(lambda) > 0.01) {
+
     K1 <- sign(lambda) * seq(-100, 100, 0.1) + 1e-10
-    kp <- length(K1)
+
     ms1 <- xik_ms(lambda, xi, K1)
     mu1 <- ms1[[1]]
     sigma1 <- ms1[[2]]
+
     d1 <- qpnd(0.75, lambda, mu1, sigma1) -
-      qpnd(0.25, lambda , mu1, sigma1) - xi * tau
+      qpnd(0.25, lambda, mu1, sigma1) -
+      xi * tau
+
+    ## ---- no root (same sign) ----
     if (all_same_sign(d1)) {
-      warning("Truncation proportion (1-A(K)) is too small to calculate parameters precisely. It is recommended to set a smaller value for tau.")
+
+      .warn(
+        "Failed to determine (mu, sigma) for the requested truncation. ",
+        "Try using a smaller value of 'tau' (less truncation).",
+        dbg = paste0("#finite(d1)=", sum(is.finite(d1)))
+      )
+
       mu <- NA
       sigma <- NA
+
     } else {
-      ld1 <- which.min(abs(d1))
-      if (sign(d1[ld1 - 1]) == sign(d1[ld1])) {
-        K2 <- seq(K1[ld1], K1[ld1 + 1], sign(lambda) * 1e-4)
-      } else {
-        K2 <- seq(K1[ld1 - 1], K1[ld1], sign(lambda) * 1e-4)
+
+      ## ---- locate root via sign change ----
+      ok  <- is.finite(d1)
+      idx <- which(ok)
+
+      if (length(idx) < 2) {
+        .stop(
+          "Failed to determine (mu, sigma) due to numerical instability. ",
+          "Try using a smaller 'tau' or different inputs.",
+          dbg = paste0("#finite(d1)=", sum(is.finite(d1)))
+        )
       }
-      kp <- length(K2)
+
+      d1c <- d1[idx]
+
+      chg <- which(d1c[-length(d1c)] * d1c[-1] <= 0)
+
+      if (length(chg) == 0) {
+        .stop(
+          "Failed to determine (mu, sigma): no root crossing was found ",
+          "over the search range. Try using a smaller 'tau'.",
+          dbg = paste0(
+            "#finite(d1)=", sum(is.finite(d1)),
+            ", range_idx=[", min(idx), ",", max(idx), "]"
+          )
+        )
+      }
+
+      ## ---- select most stable crossing ----
+      score <- pmax(abs(d1c[chg]), abs(d1c[chg + 1]))
+      j <- chg[which.min(score)]
+
+      ld1 <- idx[
+        if (abs(d1c[j]) <= abs(d1c[j + 1])) j else (j + 1)
+      ]
+
+      ## ---- boundary check ----
+      if (ld1 <= 1 || ld1 >= length(K1)) {
+        .stop(
+          "Failed to determine (mu, sigma): root crossing occurred at ",
+          "the boundary of the search grid. Adjust 'tau' or range.",
+          dbg = paste0("ld1=", ld1, ", length(K1)=", length(K1))
+        )
+      }
+
+      ## ---- refine grid ----
+      if (sign(d1[ld1 - 1]) == sign(d1[ld1])) {
+        K2 <- seq(K1[ld1], K1[ld1 + 1], sign(lambda) * 1e-04)
+      } else {
+        K2 <- seq(K1[ld1 - 1], K1[ld1], sign(lambda) * 1e-04)
+      }
+
       ms2 <- xik_ms(lambda, xi, K2)
       mu2 <- ms2[[1]]
       sigma2 <- ms2[[2]]
-      d2 <- qpnd(0.75, lambda, mu2, sigma2)-
-        qpnd(0.25, lambda, mu2, sigma2) - xi * tau
+
+      d2 <- qpnd(0.75, lambda, mu2, sigma2) -
+        qpnd(0.25, lambda, mu2, sigma2) -
+        xi * tau
+
       ld2 <- which.min(abs(d2))
-      if (abs(d2[ld2]) > xi / 100 |
+
+      ## ---- stability check ----
+      if (abs(d2[ld2]) > xi / 100 ||
           abs((qpnd(0.5, lambda, mu2[ld2], sigma2[ld2]) - xi) / xi) > 0.01) {
-        warning("Truncation proportion (1-A(K)) is too small to calculate parameters precisely. It is recommended to set a smaller value for tau.")
+
+        .warn(
+          "The requested truncation leads to unstable parameter estimates. ",
+          "Try using a smaller value of 'tau'.",
+          dbg = paste0(
+            "abs(d2_min)=", signif(abs(d2[ld2]), 4),
+            ", rel_med_err=",
+            signif(abs((qpnd(0.5, lambda,
+                             mu2[ld2], sigma2[ld2]) - xi) / xi), 4),
+            ", ld1=", ld1,
+            ", ld2=", ld2,
+            ", #cross=", length(chg)
+          )
+        )
+
         mu <- NA
         sigma <- NA
+
       } else {
         mu <- mu2[ld2]
         sigma <- sigma2[ld2]
-
       }
     }
-  }
-  else{
-    if (abs(lambda) < 0.01 & lambda != 0){
-      message("K might become huge when abs(lambda) < 0.01, so lambda was set as 0")
-    }
-    mu <- log(xi)
-    sigma <- log((tau + sqrt(tau ^ 2 + 4)) / 2) / qnorm(0.75)
-  }
-  return(data.frame(mu = mu, sigma = sigma))
-}
 
+  } else {
+
+    ## ---- small lambda approximation ----
+    if (abs(lambda) < 0.01 && lambda != 0) {
+      message(
+        "K may become large when abs(lambda) < 0.01; lambda is treated as 0."
+      )
+    }
+
+    mu <- log(xi)
+    sigma <- log((tau + sqrt(tau^2 + 4)) / 2) / qnorm(0.75)
+  }
+
+  data.frame(mu = mu, sigma = sigma)
+}
