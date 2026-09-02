@@ -189,7 +189,7 @@ pnd_est <- function(x, tn = FALSE, lmdint = c(-5, 5)) {
               dln0 <- dln_tnd(z, lambda, mu0, sigma0)
               ddln0 <- ddln_tnd(z, lambda, mu0, sigma0)
               if (det(ddln0) > 0) {
-                ddln0 <- diag(2)
+                ddln0 <- -diag(2)
               }
               count <- count + 1
             }
