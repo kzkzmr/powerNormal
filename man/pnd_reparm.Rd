@@ -2,62 +2,71 @@
 % Please edit documentation in R/pnd_reparm.R
 \name{pnd_reparm}
 \alias{pnd_reparm}
-\title{Reparametrization for the Power Normal Distribution}
+\title{Reparameterization for the Power Normal Distribution}
 \usage{
 pnd_reparm(lambda, xi, tau)
 }
 \arguments{
 \item{lambda}{Numeric scalar: shape parameter.}
 
-\item{xi}{Numeric scalar: reparametrized location parameter (i.e., median).}
+\item{xi}{Numeric scalar: median on the original measurement scale.}
 
-\item{tau}{Numeric scalar: reparametrized scale parameter (i.e.,
-interquantile range divided by median).}
+\item{tau}{Numeric scalar: relative interquartile range, defined as the
+interquartile range divided by the median.}
 }
 \value{
-A data frame with two elements:
-  \code{mu} and \code{sigma}, corresponding to the original parameters.
+A list with components \code{mu} and \code{sigma},
+  corresponding to the conventional location and scale parameters.
 }
 \description{
-Computes the original location and scale parameters from the reparametrized
-location (median) and scale (interquantile range / median) parameters,
-as proposed by Maruo et al. (2017).
+Computes the conventional location and scale parameters from parameters
+based on the median and relative interquartile range, as proposed by
+Maruo et al. (2017).
 }
 \details{
 In the power normal distribution, the location and scale parameters
 \eqn{\mu} and \eqn{\sigma} correspond to the mean and standard deviation
-parameters on the transformed scale. Since both depend strongly on the
-shape parameter \eqn{\lambda}, they are not easy to interpret.
+on the transformed scale. Because both depend on the shape parameter
+\eqn{\lambda}, they are not directly interpretable on the original scale.
 
-This makes it difficult to directly specify meaningful parameter values in
-simulations. To address this, Maruo et al. (2017) proposed a
-reparametrization based on:
-
+Maruo et al. (2017) proposed a reparameterization based on
 \itemize{
-  \item the median \eqn{\xi_{0.5}}, and
-  \item the scale-related quantity
-        \eqn{\tau = (\xi_{0.75} - \xi_{0.25}) / \xi_{0.5}},
+  \item the median \eqn{\xi = Q(0.5)}, and
+  \item the relative interquartile range
+    \eqn{\tau = \{Q(0.75)-Q(0.25)\}/Q(0.5)},
 }
+where \eqn{Q(p)} denotes the \eqn{100p}th percentile of the normalized
+power normal distribution.
 
-where \eqn{\xi_p} denotes the \eqn{100p} percentile of the distribution.
+For \eqn{\lambda=0}, the distribution is log-normal and the corresponding
+\eqn{\mu} and \eqn{\sigma} are obtained in closed form. For
+\eqn{\lambda\ne0}, the function solves a one-dimensional root-finding
+problem after introducing the numerically stable parameter
+\deqn{c = \lambda K = (1+\lambda\mu)/\sigma.}
+Unlike \eqn{K}, \eqn{c} remains finite as \eqn{\lambda} approaches zero.
+Conditional normal probabilities are evaluated on the log-probability
+scale, and logarithmic quantile ratios are calculated using
+\code{log1p()} to reduce cancellation near \eqn{\lambda=0}.
 
-The \code{pnd_reparm} function numerically calculates the original
-parameters \eqn{\mu} and \eqn{\sigma} corresponding to the given
-reparametrized values \eqn{\xi_{0.5}} and \eqn{\tau}.
-See Maruo et al. (2017) for the algorithmic details.
+Not every combination of \code{lambda} and \code{tau} corresponds to a
+finite power normal distribution. If the requested relative interquartile
+range is outside the admissible range, or if a numerically stable solution
+cannot be obtained, the function returns \code{NA} values with a warning.
 }
 \examples{
 pnd_reparm(lambda = 0.5, xi = 100, tau = 1)
+pnd_reparm(lambda = 0.001, xi = 100, tau = 1)
+pnd_reparm(lambda = 0, xi = 100, tau = 1)
 
 }
 \references{
 Goto, M., & Inoue, T. (1980). Some properties of the power normal
-distribution. \emph{Japanese Journal of Biometrics}, 1, 28–54.
+distribution. \emph{Japanese Journal of Biometrics}, 1, 28--54.
 \url{https://doi.org/10.5691/jjb.1.28}
 
-Maruo, K., Yamabe, T., & Yamaguchi, Y. (2017). Statistical simulation based on
-right-skewed distributions. \emph{Computational Statistics}, 32(3), 889–907.
-\url{https://doi.org/10.1007/s00180-016-0664-4}
+Maruo, K., Yamabe, T., & Yamaguchi, Y. (2017). Statistical simulation based
+on right-skewed distributions. \emph{Computational Statistics}, 32(3),
+889--907. \url{https://doi.org/10.1007/s00180-016-0664-4}
 }
 \seealso{
 \code{\link[powerNormal]{dpnd_rp}},

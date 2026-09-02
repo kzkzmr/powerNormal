@@ -15,7 +15,7 @@ Default is \code{FALSE}.}
 
 \item{lmdint}{A numeric vector of length 2 specifying the interval
 within which to search for the optimal shape parameter \code{lambda}.
-Default is \code{c(-3, 3)}.}
+Default is \code{c(-5, 5)}.}
 }
 \value{
 A list with components:

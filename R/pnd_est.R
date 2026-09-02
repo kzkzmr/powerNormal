@@ -9,7 +9,7 @@
 #' Default is \code{FALSE}.
 #' @param lmdint A numeric vector of length 2 specifying the interval
 #' within which to search for the optimal shape parameter \code{lambda}.
-#' Default is \code{c(-3, 3)}.
+#' Default is \code{c(-5, 5)}.
 #'
 #' @details
 #' This function estimates the parameters of the power normal
@@ -122,7 +122,7 @@ pnd_est <- function(x, tn = FALSE, lmdint = c(-5, 5)) {
         ddln2[1, 1] <- K
         ddln2[1, 2] <- 1 - K ^ 2
         ddln2[2, 1] <- ddln2[1, 2]
-        ddln2[2, 2] <- K * (K ^ 2 ^ 2)
+        ddln2[2, 2] <- K * (K ^ 2 - 2)
         ddln3[1, 1] <- 1
         ddln3[1, 2] <- -K
         ddln3[2, 1] <- -K
@@ -151,8 +151,10 @@ pnd_est <- function(x, tn = FALSE, lmdint = c(-5, 5)) {
           } else {
           dln0 <- dln_tnd(z, lambda, mu0, sigma0)
           ddln0 <- ddln_tnd(z, lambda, mu0, sigma0)
-          if (det(ddln0) > 0) {
-            ddln0 <- diag(2)
+          if (ddln0[1, 1] >= 0 ||
+              !is.finite(det(ddln0)) ||
+              det(ddln0) <= 0) {
+            ddln0 <- -diag(2)
           }
           count <- 1
           while (stpflg == 0) {
@@ -243,7 +245,7 @@ pnd_est <- function(x, tn = FALSE, lmdint = c(-5, 5)) {
     z <- bct(x, lambda)
     mu <- mean(z)
     n <- length(x)
-    sigma <- sd(z) * (n - 1) / n
+    sigma <- sd(z) * sqrt((n - 1) / n)
     est <- list(lambda = lambda, mu = mu, sigma = sigma)
   }
   return(est)

@@ -108,7 +108,7 @@
 #' rpnd(n = 20, lambda = -0.5, mu = 1, sigma = 0.1)
 #'
 #' @importFrom bcmixed bct
-#' @importFrom stats dnorm pnorm qnorm rnorm
+#' @importFrom stats dnorm pnorm qnorm rnorm runif
 #'
 #' @name pnd_functions
 #' @rdname pnd_functions
@@ -206,26 +206,6 @@ rpnd <- function(n, lambda, mu, sigma){
   if (length(n) > 1) {
     n2 <- length(n)
   }
-  if (lambda == 0) {
-    AK <- 1
-  } else {
-    K <- (1 + lambda * mu) / (lambda * sigma)
-    AK <- pnorm(sign(lambda) * K)
-  }
-
-  n3 <- round(n2 / AK * 2)
-  z0 <- rnorm(n3, mu, sigma)
-  cut0 <- numeric(n3) == 0
-  if (lambda < 0){
-    cut0 <- z0 < -1 / lambda
-  } else {
-    cut0 <- z0 > -1 / lambda
-  }
-  z <- z0[cut0][1:n2]
-  if (lambda == 0) {
-    x <- exp(z)
-  } else {
-    x <- (lambda * z + 1) ^ (1 / lambda)
-  }
+  x <- qpnd(runif(n2), lambda, mu, sigma)
   return(x)
 }

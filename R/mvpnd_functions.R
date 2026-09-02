@@ -89,7 +89,7 @@ rmvpnd <- function(n, lambda, mu, sigma, corr, ...){
   AK <- pmvnorm(upper = sK, corr = corr)
   n2 <- round(n / AK * 2)
 
-  z0 <- rmvnorm(n2, sigma = corr, )
+  z0 <- rmvnorm(n2, sigma = corr, ...)
   z1 <- z0
 
   cut0 <- matrix(TRUE, n2, k)

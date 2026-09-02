@@ -1,7 +1,7 @@
 Package: powerNormal
 Type: Package
 Title: The power normal distribution with or without reparametrization
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: c(
     person(
       "Kazushi", "Maruo",
@@ -21,4 +21,7 @@ License: GPL-2 | GPL-3
 Imports: bcmixed, mvtnorm, MASS
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.3.3
+Config/roxygen2/version: 8.0.0
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
